@@ -107,8 +107,16 @@ module Notification = struct
     module ProofViewParams = struct
 
       type t = {
-        proof: ProofState.t option;
+        proof: ProofState.minifiedT option;
         messages: (DiagnosticSeverity.t * pp) list;
+      } [@@deriving yojson]
+
+    end
+
+    module ElidedProofViewParams = struct
+
+      type t = {
+        proof : ProofState.t;
       } [@@deriving yojson]
 
     end
@@ -129,6 +137,7 @@ module Notification = struct
     | MoveCursor of MoveCursorParams.t
     | BlockOnError of BlockOnErrorParams.t
     | ProofView of ProofViewParams.t
+    | ElidedProofView of ElidedProofViewParams.t
     | CoqLogMessage of CoqLogMessageParams.t
     | SearchResult of query_result
 
@@ -143,6 +152,11 @@ module Notification = struct
       | ProofView params -> 
         let method_ = "vscoq/proofView" in
         let params = ProofViewParams.yojson_of_t params in
+        let params = Some (Jsonrpc.Structured.t_of_yojson params) in
+        Jsonrpc.Notification.{ method_; params }
+      | ElidedProofView params -> 
+        let method_ = "vscoq/elidedProofView" in
+        let params = ElidedProofViewParams.yojson_of_t params in
         let params = Some (Jsonrpc.Structured.t_of_yojson params) in
         Jsonrpc.Notification.{ method_; params }
       | SearchResult params ->

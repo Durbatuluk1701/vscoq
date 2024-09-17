@@ -14,4 +14,6 @@
 
 type pp [@@deriving yojson]
 
+val pp_of_coqpp_with_depth : Pp.t -> int -> (pp * (string * pp) list)
+
 val pp_of_coqpp : Pp.t -> pp

@@ -105,7 +105,7 @@ val all_diagnostics : state -> Diagnostic.t list
 (** all_diagnostics [doc] returns the diagnostics corresponding to the sentences
     that have been executed in [doc]. *)
 
-val get_proof : state -> Settings.Goals.Diff.Mode.t -> Position.t option -> ProofState.t option
+val get_proof : state -> Settings.Goals.Diff.Mode.t -> Position.t option -> int -> ProofState.t option
 
 val get_completions : state -> Position.t -> (completion_item list, string) Result.t
 

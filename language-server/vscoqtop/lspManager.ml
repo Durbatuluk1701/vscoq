@@ -45,6 +45,8 @@ let point_interp_mode = ref Settings.PointInterpretationMode.Cursor
 
 let block_on_first_error = ref true
 
+let max_depth = ref 17
+
 let Dm.Types.Log log = Dm.Log.mk_log "lspManager"
 
 let conf_request_id = max_int
@@ -64,6 +66,7 @@ type event =
  | Notification of notification
  | LogEvent of Dm.Log.event
  | SendProofView of DocumentUri.t * Position.t option
+ | SendElidedProofView of ProofState.t
  | SendMoveCursor of DocumentUri.t * Range.t
  | SendBlockOnError of DocumentUri.t * Range.t
 
@@ -133,7 +136,9 @@ let do_configuration settings =
   full_messages := settings.goals.messages.full;
   max_memory_usage := settings.memory.limit * 1000000000;
   block_on_first_error := settings.proof.block;
-  point_interp_mode := settings.proof.pointInterpretationMode
+  point_interp_mode := settings.proof.pointInterpretationMode;
+  max_depth := settings.goals.maxDepth
+  (* TODO: Add the depth config here *)
 
 let send_configuration_request () =
   let id = `Int conf_request_id in
@@ -207,7 +212,26 @@ let send_highlights uri doc =
 let send_proof_view pv =
   log "-------------------------- sending proof view ---------------------------------------";
   let notification = Notification.Server.ProofView pv in
+  let time_start = Unix.gettimeofday () in
+  let jsonrpc = Notification.Server.to_jsonrpc notification in
+  let time_end = Unix.gettimeofday () in
+  log @@ Printf.sprintf "jsonrpc conversion time: %f" (time_end -. time_start);
+  let yojson_time_start = Unix.gettimeofday () in
+  let yojson = Jsonrpc.Notification.yojson_of_t jsonrpc in
+  let yojson_time_end = Unix.gettimeofday () in
+  log @@ Printf.sprintf "yojson conversion time: %f" (yojson_time_end -. yojson_time_start);
+  let output_json_time_start = Unix.gettimeofday () in
+  output_json yojson;
+  let output_json_time_end = Unix.gettimeofday () in
+  log @@ Printf.sprintf "output json time: %f" (output_json_time_end -. output_json_time_start)
+
+  (* output_json @@ Jsonrpc.Notification.yojson_of_t @@ Notification.Server.to_jsonrpc notification *)
+
+  let send_elided_proof_view pv =
+  log "-------------------------- sending elided proof view ---------------------------------------";
+  let notification = Notification.Server.ElidedProofView pv in
   output_json @@ Jsonrpc.Notification.yojson_of_t @@ Notification.Server.to_jsonrpc notification
+
 
 let send_move_cursor uri range = 
   let notification = Notification.Server.MoveCursor {uri;range} in 
@@ -714,14 +738,31 @@ let handle_event = function
     begin match Hashtbl.find_opt states (DocumentUri.to_path uri) with
     | None -> log @@ "ignoring event on non existent document"; []
     | Some { st } ->
-      let proof = Dm.DocumentManager.get_proof st !diff_mode position in
+      let time_start = Unix.gettimeofday () in
+      let proof = Dm.DocumentManager.get_proof st !diff_mode position max_depth.contents in
+      let time_end = Unix.gettimeofday () in
+      log @@ Printf.sprintf "proof extraction time: %f" (time_end -. time_start);
+      let message_time_start = Unix.gettimeofday () in
       let messages = Dm.DocumentManager.get_messages st position in
+      let message_time_end = Unix.gettimeofday () in
+      log @@ Printf.sprintf "message extraction time: %f" (message_time_end -. message_time_start);
       let messages =
         if !full_messages then messages
         else List.filter (fun (sev,_) -> sev == DiagnosticSeverity.Information) messages
       in
-      send_proof_view Notification.Server.ProofViewParams.{ proof; messages }; []
+      match proof with
+      | None -> (* maybe we want a just send messages here? *)
+        send_proof_view Notification.Server.ProofViewParams.{ proof = None; messages }; []
+      | Some proof ->
+        let mini_proof = ProofState.minify_proof proof in
+        send_proof_view Notification.Server.ProofViewParams.{ proof = Some mini_proof; messages }; [
+          (* TODO: Something needs to be done here... *)
+        ]
+        
     end
+  | SendElidedProofView proof -> 
+    send_elided_proof_view Notification.Server.ElidedProofViewParams.{ proof }; []
+
   | SendMoveCursor (uri, range) -> 
     send_move_cursor uri range; []
   | SendBlockOnError (uri, range) ->
@@ -734,6 +775,7 @@ let pr_event = function
   | Notification _ -> Pp.str"notif"
   | LogEvent _ -> Pp.str"debug"
   | SendProofView _ -> Pp.str"proofview"
+  | SendElidedProofView _ -> Pp.str"elided proofview"
   | SendMoveCursor _ -> Pp.str"move cursor"
   | SendBlockOnError _ -> Pp.str"block on error"
 

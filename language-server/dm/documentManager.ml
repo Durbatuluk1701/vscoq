@@ -543,7 +543,7 @@ let handle_event ev st block =
   | ExecutionManagerEvent ev ->
     handle_execution_manager_event st ev
 
-let get_proof st diff_mode pos =
+let get_proof st diff_mode pos maxDepth =
   let previous_st id =
     let oid = fst @@ Scheduler.task_for_sentence (Document.schedule st.document) id in
     Option.bind oid (ExecutionManager.get_vernac_state st.execution_state)
@@ -556,7 +556,7 @@ let get_proof st diff_mode pos =
   let oid = Option.cata (id_of_pos st) observe_id pos in
   let ost = Option.bind oid (ExecutionManager.get_vernac_state st.execution_state) in
   let previous = Option.bind oid previous_st in
-  Option.bind ost (ProofState.get_proof ~previous diff_mode)
+  Option.bind ost (fun ost -> ProofState.get_proof ~previous diff_mode ost maxDepth)
 
 let context_of_id st = function
   | None -> Some (ExecutionManager.get_initial_context st.execution_state)

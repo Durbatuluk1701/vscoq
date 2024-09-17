@@ -15,4 +15,8 @@ open Settings
 
 type t [@@deriving yojson]
 
-val get_proof : previous:Vernacstate.t option -> Goals.Diff.Mode.t -> Vernacstate.t -> t option
+type minifiedT [@@deriving yojson]
+
+val minify_proof : t -> minifiedT
+
+val get_proof : previous:Vernacstate.t option -> Goals.Diff.Mode.t -> Vernacstate.t -> int -> t option

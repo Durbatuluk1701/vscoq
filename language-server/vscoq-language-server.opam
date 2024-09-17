@@ -29,6 +29,7 @@ depends: [
   "result" { >= "1.5" }
   "lsp" { >= "1.15" < "1.19"}
   "sel" {>= "0.4.0"}
+  "uuidm"
 ]
 synopsis: "VSCoq language server"
 available: arch != "arm32" & arch != "x86_32"

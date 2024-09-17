@@ -2,10 +2,10 @@ import { integer } from "vscode-languageclient";
 export type PpTag = string;
 
 export enum PpMode {
-    horizontal = "Pp_hbox",
-    vertical = "Pp_vbox",
-    hvBox = "Pp_hvbox",
-    hovBox = "Pp_hovbox"
+  horizontal = "Pp_hbox",
+  vertical = "Pp_vbox",
+  hvBox = "Pp_hvbox",
+  hovBox = "Pp_hovbox",
 }
 
 export enum HideStates {
@@ -24,6 +24,7 @@ export type PpBox = ["Ppcmd_box", BlockType, PpString];
 
 export type PpString =
   | ["Ppcmd_empty"]
+  | ["Ppcmd_elided", string]
   | ["Ppcmd_string", string]
   | ["Ppcmd_glue", PpString[]]
   | ["Ppcmd_box", BlockType, PpString]
@@ -34,6 +35,7 @@ export type PpString =
 
 export type FlattenedPpString =
   | ["Ppcmd_empty"]
+  | ["Ppcmd_elided", string]
   | ["Ppcmd_string", string]
   | ["Ppcmd_box", BlockType, PpString[]]
   | ["Ppcmd_tag", PpTag, PpString]
@@ -42,72 +44,72 @@ export type FlattenedPpString =
   | ["Ppcmd_comment", string[]];
 
 export enum DisplayType {
-    box = "box",
-    term = "term",
-    break = "break"
+  box = "box",
+  term = "term",
+  break = "break",
 }
 
 export type BreakInfo = {
-    id: string,
-    offset: number
+  id: string;
+  offset: number;
 };
 
 export interface Break {
-    id: string,
-    type: DisplayType.break,
-    offset: number,
-    mode: PpMode,
-    horizontalIndent: number,
-    indent: number,
-    shouldBreak: boolean,
+  id: string;
+  type: DisplayType.break;
+  offset: number;
+  mode: PpMode;
+  horizontalIndent: number;
+  indent: number;
+  shouldBreak: boolean;
 }
 
 export interface Term {
-    type: DisplayType.term,
-    classList:  string[],
-    content: string,
+  type: DisplayType.term;
+  classList: string[];
+  content: string;
 }
 
 export type BoxDisplay = Break | Term | Box | null;
 
 export enum TokenType {
-    term = "term",
-    open = "open",
-    close = "close",
-    break = "break"
+  term = "term",
+  open = "open",
+  close = "close",
+  break = "break",
 }
 
 export type TokenTerm = {
-    type: TokenType.term,
-    length: number
+  type: TokenType.term;
+  length: number;
 };
 
 export type BlockOpen = {
-    type: TokenType.open,
-    length: number,
-    mode: PpMode,
-    offset: number,
+  type: TokenType.open;
+  length: number;
+  mode: PpMode;
+  offset: number;
 };
 
 export type BlockClose = {
-    type: TokenType.close
+  type: TokenType.close;
 };
 
 export type TokenBreak = {
-    id: string,
-    length: number,
-    type: TokenType.break,
-    indent: number,
+  id: string;
+  length: number;
+  type: TokenType.break;
+  indent: number;
 };
 
 export type Token = TokenTerm | BlockOpen | BlockClose | TokenBreak;
 
 export interface Box {
-    id: string,
-    type: DisplayType.box,
-    depth: number,
-    classList: string[],
-    mode: PpMode,
-    indent: number,
-    boxChildren: BoxDisplay[]
+  id: string;
+  type: DisplayType.box;
+  // depth: number;
+  classList: string[];
+  mode: PpMode;
+  indent: number;
+  boxChildren: BoxDisplay[];
 }

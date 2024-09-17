@@ -126,6 +126,7 @@ module Goals = struct
   type t = {
     diff: Diff.t;
     messages: Messages.t;
+    maxDepth: int;
   } [@@deriving yojson] [@@yojson.allow_extra_fields]
 
 end

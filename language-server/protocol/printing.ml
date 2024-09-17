@@ -26,6 +26,7 @@ type block_type = Pp.block_type =
 
 type pp =
 | Ppcmd_empty
+| Ppcmd_elided of string
 | Ppcmd_string of string
 | Ppcmd_glue of pp list
 | Ppcmd_box  of block_type * pp
@@ -62,7 +63,31 @@ let rec regroup_tags_aux acc = function
 and regroup_tags l =
  match regroup_tags_aux [[]] l with [l] -> List.rev l | _ -> failwith "tag not closed"
 
-let rec pp_of_coqpp t = match Pp.repr t with
+let rec pp_of_coqpp_with_depth' t depth maxDepth = 
+  if depth >= maxDepth then 
+    (* generate a new uuid for this term *)
+    let uuid = Uuidm.v `V4 in
+    let uuid_str = Uuidm.to_string uuid in
+    Ppcmd_elided uuid_str, [(uuid_str, pp_of_coqpp t)]
+  else
+  match Pp.repr t with
+  | Pp.Ppcmd_empty -> Ppcmd_empty, []
+  | Pp.Ppcmd_string s -> Ppcmd_string s, []
+  | Pp.Ppcmd_glue l -> (* We are working around a Coq hack here *)
+    let l = match regroup_tags_aux [[]] l with [l] -> l | _ -> failwith "ERROR IN REGROUP TAGS AUX" in
+    let acc = List.map (fun x -> pp_of_coqpp_with_depth' x depth maxDepth) l in
+    let glue_blob, map = List.fold_left (fun (acc_blob, acc_map) (x, y) -> (x :: acc_blob, y@acc_map)) ([], []) acc in
+    Ppcmd_glue glue_blob, map
+  | Pp.Ppcmd_box (bt, pp) -> 
+    let pp, map = pp_of_coqpp_with_depth' pp (depth + 1) maxDepth in
+    Ppcmd_box (bt, pp), map
+  | Pp.Ppcmd_tag (tag, pp) -> 
+    let pp, map = pp_of_coqpp_with_depth' pp (depth + 1) maxDepth in
+    Ppcmd_tag (tag, pp), map
+  | Pp.Ppcmd_print_break (m,n) -> Ppcmd_print_break (m,n), []
+  | Pp.Ppcmd_force_newline -> Ppcmd_force_newline, []
+  | Pp.Ppcmd_comment l -> Ppcmd_comment l, []
+and pp_of_coqpp t = match Pp.repr t with
   | Pp.Ppcmd_empty -> Ppcmd_empty
   | Pp.Ppcmd_string s -> Ppcmd_string s
   | Pp.Ppcmd_glue l -> (* We are working around a Coq hack here *)
@@ -73,3 +98,6 @@ let rec pp_of_coqpp t = match Pp.repr t with
   | Pp.Ppcmd_print_break (m,n) -> Ppcmd_print_break (m,n)
   | Pp.Ppcmd_force_newline -> Ppcmd_force_newline
   | Pp.Ppcmd_comment l -> Ppcmd_comment l
+
+let pp_of_coqpp_with_depth t maxDepth = 
+  pp_of_coqpp_with_depth' t 0 maxDepth

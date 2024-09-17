@@ -38,13 +38,15 @@ const getPpTag = (
   tag: string,
   indent: number,
   mode: PpMode,
-  depth: number,
   coqCss: CSSModuleClasses,
-) => {
+): Box | Term | null => {
   const id = uuid();
   switch (pp[0]) {
     case "Ppcmd_empty":
       console.error("Received PpTag with empty");
+      return null;
+    case "Ppcmd_elided":
+      console.error("Received PpTag with elided");
       return null;
     case "Ppcmd_string":
       return {
@@ -59,7 +61,6 @@ const getPpTag = (
         mode: mode,
         classList: [tag],
         indent: indent,
-        boxChildren: flattenGlue(pp[1], mode, indent, id, depth + 1, coqCss),
       } as Box;
     case "Ppcmd_force_newline":
       console.error("Received PpTag with fnl");
@@ -76,7 +77,7 @@ const getPpTag = (
         mode: mode,
         classList: [tag],
         indent: indent,
-        boxChildren: getBoxChildren(pp[2], m, i, id, depth + 1, coqCss),
+        boxChildren: getBoxChildren(pp[2], m, i, id, coqCss),
       } as Box;
     case "Ppcmd_tag":
       console.error("Received PpTag with tag");
@@ -92,13 +93,20 @@ const flattenGlue = (
   mode: PpMode,
   indent: number,
   boxId: string,
-  depth: number,
   coqCss: CSSModuleClasses,
 ): BoxDisplay[] => {
-  const g = glue.map((pp) => {
+  const g: BoxDisplay[][] = glue.map((pp) => {
     switch (pp[0]) {
       case "Ppcmd_empty":
         return [];
+      case "Ppcmd_elided":
+        return [
+          {
+            type: DisplayType.term,
+            classList: [classes.Text],
+            content: "[...]",
+          } as Term,
+        ];
       case "Ppcmd_string":
         return [
           {
@@ -108,7 +116,7 @@ const flattenGlue = (
           } as Term,
         ];
       case "Ppcmd_glue":
-        return flattenGlue(pp[1], mode, indent, boxId, depth, coqCss);
+        return flattenGlue(pp[1], mode, indent, boxId, coqCss);
       case "Ppcmd_force_newline":
         return [
           {
@@ -124,7 +132,7 @@ const flattenGlue = (
       case "Ppcmd_comment":
         return [];
       case "Ppcmd_box":
-        return [boxifyPpString(pp, coqCss, depth)];
+        return [boxifyPpString(pp, coqCss)];
       case "Ppcmd_tag":
         return [
           getPpTag(
@@ -132,7 +140,6 @@ const flattenGlue = (
             coqCss[pp[1].replaceAll(".", "-")],
             indent,
             mode,
-            depth,
             coqCss,
           ),
         ];
@@ -151,9 +158,7 @@ const flattenGlue = (
         ];
     }
   });
-  const r = g.reduce((acc, curr) => {
-    return acc.concat(curr);
-  }, []);
+  const r = g.reduce((acc, cur) => acc.concat(cur), []);
 
   return r;
 };
@@ -163,14 +168,21 @@ const getBoxChildren = (
   mode: PpMode,
   indent: number,
   boxId: string,
-  depth: number,
   coqCss: CSSModuleClasses,
 ): BoxDisplay[] => {
   switch (pp[0]) {
     case "Ppcmd_empty":
       return [];
+    case "Ppcmd_elided":
+      return [
+        {
+          type: DisplayType.term,
+          classList: [classes.Text],
+          content: "[...]",
+        } as Term,
+      ];
     case "Ppcmd_glue":
-      return flattenGlue(pp[1], mode, indent, boxId, depth, coqCss);
+      return flattenGlue(pp[1], mode, indent, boxId, coqCss);
     case "Ppcmd_string":
       return [
         {
@@ -184,7 +196,7 @@ const getBoxChildren = (
     case "Ppcmd_comment":
       return [];
     case "Ppcmd_box":
-      return [boxifyPpString(pp, coqCss, depth)];
+      return [boxifyPpString(pp, coqCss)];
     case "Ppcmd_tag":
       return [
         getPpTag(
@@ -192,7 +204,6 @@ const getBoxChildren = (
           coqCss[pp[1].replaceAll(".", "-")],
           indent,
           mode,
-          depth,
           coqCss,
         ),
       ];
@@ -201,11 +212,7 @@ const getBoxChildren = (
   }
 };
 
-const boxifyPpString = (
-  pp: PpString,
-  coqCss: CSSModuleClasses,
-  depth: number = 0,
-) => {
+const boxifyPpString = (pp: PpString, coqCss: CSSModuleClasses): Box => {
   const id = uuid();
   switch (pp[0]) {
     case "Ppcmd_empty":
@@ -219,18 +226,24 @@ const boxifyPpString = (
       return {
         id: "box-" + id,
         type: DisplayType.box,
-        depth: depth,
         classList: [],
         mode: PpMode.hovBox,
         indent: 0,
-        boxChildren: getBoxChildren(
-          pp,
-          PpMode.hovBox,
-          0,
-          id,
-          depth + 1,
-          coqCss,
-        ),
+        boxChildren: getBoxChildren(pp, PpMode.hovBox, 0, id, coqCss),
+      } as Box;
+    case "Ppcmd_elided":
+      return {
+        id: "box-" + id,
+        type: DisplayType.box,
+        classList: [classes.Elided],
+        indent: 0,
+        boxChildren: [
+          {
+            type: DisplayType.term,
+            classList: [classes.Text],
+            content: "[...]",
+          } as Term,
+        ],
       } as Box;
     case "Ppcmd_box":
       const mode = pp[1][0];
@@ -238,11 +251,10 @@ const boxifyPpString = (
       return {
         id: "box-" + id,
         type: DisplayType.box,
-        depth: depth,
         mode: mode,
         classList: [],
         indent: indent,
-        boxChildren: getBoxChildren(pp[2], mode, indent, id, depth + 1, coqCss),
+        boxChildren: getBoxChildren(pp[2], mode, indent, id, coqCss),
       } as Box;
   }
 };
@@ -258,7 +270,7 @@ const getContext = () => {
 const ppDisplay: FunctionComponent<PpProps> = (props) => {
   const { pp, coqCss, maxDepth } = props;
   const inputBox = boxifyPpString(pp, coqCss);
-  const [boxQueue, setBoxQueue] = useState<Box[]>([]);
+  // console.log("box depth", max_box_depth(inputBox));
   const [displayBox, setDisplayBox] = useState<Box>(inputBox);
   const [breakIds, setBreakIds] = useState<BreakInfo[]>([]);
   const [tokenStream, setTokenStream] = useState<Token[]>([]);
@@ -272,14 +284,12 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
     console.time("initializeDisplay");
     setDisplayBox(inputBox);
     console.timeLog("initializeDisplay");
-    setBoxQueue([inputBox]);
-    console.timeLog("initializeDisplay");
     const context = getContext();
     if (!context) {
       console.error("Could not get canvas context");
       return;
     }
-    setTokenStream(buildTokenStream(inputBox, context));
+    // setTokenStream(buildTokenStream(inputBox, context));
     console.timeLog("initializeDisplay");
     computeNeededBreaks();
     console.timeEnd("initializeDisplay");
@@ -504,14 +514,12 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
     box: Box,
     breaks: BreakInfo[],
     parentHide: HideStates,
-    maxDepth: number,
   ): JSX.Element => {
     return (
       <PpBox
         key={`box-${box.id}`}
         id={box.id}
         coqCss={coqCss}
-        depth={box.depth}
         classList={box.classList}
         mode={box.mode}
         type={box.type}
@@ -519,7 +527,6 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
         indent={box.indent}
         breaks={breaks}
         parentHide={parentHide}
-        maxDepth={maxDepth}
       />
     );
   };
@@ -527,7 +534,7 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
   return (
     <div ref={container} className={classes.Container}>
       <span ref={content} className={classes.Content}>
-        {PpBox_from_Box(displayBox, breakIds, HideStates.UNHIDE, maxDepth)}
+        {PpBox_from_Box(displayBox, breakIds, HideStates.UNHIDE)}
         {/* <PpBox
           id={displayBox.id}
           coqCss={coqCss}
