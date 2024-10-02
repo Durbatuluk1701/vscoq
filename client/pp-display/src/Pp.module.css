@@ -1,35 +1,35 @@
 .Container {
-    display:block;
-    width: 100%;
+  display: block;
+  width: 100%;
 }
 
 .Ellipsis {
-    color: var(--vscode-coq-termReference);
-    font-style: italic;
-    cursor: pointer;
+  color: var(--vscode-coq-termReference);
+  font-style: italic;
+  cursor: pointer;
 }
 
 .Content {
-    white-space: pre;
+  white-space: pre;
 }
 
 .Box {
-    display: inline;
-    cursor: pointer;
+  display: inline;
+  cursor: pointer;
 }
 
 .Box + .Text {
-    vertical-align: bottom;
+  vertical-align: bottom;
 }
 
 .Box + .Tag {
-    vertical-align: bottom;
+  vertical-align: bottom;
 }
 
 .Hovered:not(:has(.Hovered:hover)):hover {
-    border-width: 1px;
-    border-style: dashed;
-    border-color: white;
+  border-width: 1px;
+  border-style: dashed;
+  border-color: white;
 }
 
 /* .Box:not(:has(.Box:hover)):hover {

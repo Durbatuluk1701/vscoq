@@ -7,10 +7,9 @@ import PpBox from "./pp-box";
 import {
   Box,
   BoxDisplay,
-  Break,
   BreakInfo,
+  DisplayableBox,
   DisplayType,
-  HideStates,
   PpMode,
   PpString,
   Term,
@@ -18,12 +17,12 @@ import {
   TokenType,
 } from "./types";
 
+import PpElided from "./pp-elided";
 import classes from "./Pp.module.css";
 
 type PpProps = {
   pp: PpString;
   coqCss: CSSModuleClasses;
-  maxDepth: number;
 };
 
 type DisplayState = {
@@ -53,7 +52,7 @@ const getPpTag = (
         type: DisplayType.term,
         classList: [classes.Tag, tag],
         content: pp[1],
-      } as Term;
+      };
     case "Ppcmd_glue":
       return {
         id: "box-" + id,
@@ -61,7 +60,8 @@ const getPpTag = (
         mode: mode,
         classList: [tag],
         indent: indent,
-      } as Box;
+        boxChildren: flattenGlue(pp[1], mode, indent, id, coqCss),
+      };
     case "Ppcmd_force_newline":
       console.error("Received PpTag with fnl");
       return null;
@@ -78,7 +78,7 @@ const getPpTag = (
         classList: [tag],
         indent: indent,
         boxChildren: getBoxChildren(pp[2], m, i, id, coqCss),
-      } as Box;
+      };
     case "Ppcmd_tag":
       console.error("Received PpTag with tag");
       return null;
@@ -100,20 +100,14 @@ const flattenGlue = (
       case "Ppcmd_empty":
         return [];
       case "Ppcmd_elided":
-        return [
-          {
-            type: DisplayType.term,
-            classList: [classes.Text],
-            content: "[...]",
-          } as Term,
-        ];
+        return [{ id: pp[1], type: DisplayType.elided }];
       case "Ppcmd_string":
         return [
           {
             type: DisplayType.term,
             classList: [classes.Text],
             content: pp[1],
-          } as Term,
+          },
         ];
       case "Ppcmd_glue":
         return flattenGlue(pp[1], mode, indent, boxId, coqCss);
@@ -127,7 +121,7 @@ const flattenGlue = (
             horizontalIndent: 0,
             indent: indent,
             shouldBreak: true,
-          } as Break,
+          },
         ];
       case "Ppcmd_comment":
         return [];
@@ -154,7 +148,7 @@ const flattenGlue = (
             horizontalIndent: pp[1],
             indent: pp[2],
             shouldBreak: false,
-          } as Break,
+          },
         ];
     }
   });
@@ -174,13 +168,7 @@ const getBoxChildren = (
     case "Ppcmd_empty":
       return [];
     case "Ppcmd_elided":
-      return [
-        {
-          type: DisplayType.term,
-          classList: [classes.Text],
-          content: "[...]",
-        } as Term,
-      ];
+      return [{ id: pp[1], type: DisplayType.elided }];
     case "Ppcmd_glue":
       return flattenGlue(pp[1], mode, indent, boxId, coqCss);
     case "Ppcmd_string":
@@ -189,7 +177,7 @@ const getBoxChildren = (
           type: DisplayType.term,
           classList: [classes.Text],
           content: pp[1],
-        } as Term,
+        },
       ];
     case "Ppcmd_force_newline":
       return [];
@@ -212,7 +200,10 @@ const getBoxChildren = (
   }
 };
 
-const boxifyPpString = (pp: PpString, coqCss: CSSModuleClasses): Box => {
+const boxifyPpString = (
+  pp: PpString,
+  coqCss: CSSModuleClasses,
+): DisplayableBox => {
   const id = uuid();
   switch (pp[0]) {
     case "Ppcmd_empty":
@@ -230,21 +221,12 @@ const boxifyPpString = (pp: PpString, coqCss: CSSModuleClasses): Box => {
         mode: PpMode.hovBox,
         indent: 0,
         boxChildren: getBoxChildren(pp, PpMode.hovBox, 0, id, coqCss),
-      } as Box;
+      };
     case "Ppcmd_elided":
       return {
-        id: "box-" + id,
-        type: DisplayType.box,
-        classList: [classes.Elided],
-        indent: 0,
-        boxChildren: [
-          {
-            type: DisplayType.term,
-            classList: [classes.Text],
-            content: "[...]",
-          } as Term,
-        ],
-      } as Box;
+        id: id,
+        type: DisplayType.elided,
+      };
     case "Ppcmd_box":
       const mode = pp[1][0];
       const indent = mode !== PpMode.horizontal ? pp[1][1] : 0;
@@ -255,25 +237,21 @@ const boxifyPpString = (pp: PpString, coqCss: CSSModuleClasses): Box => {
         classList: [],
         indent: indent,
         boxChildren: getBoxChildren(pp[2], mode, indent, id, coqCss),
-      } as Box;
+      };
   }
 };
 
-//create a canvas and get its context to compute character width
-const getContext = () => {
-  const fragment = document.createDocumentFragment();
-  const canvas = document.createElement("canvas");
-  fragment.appendChild(canvas);
-  return canvas.getContext("2d");
-};
-
 const ppDisplay: FunctionComponent<PpProps> = (props) => {
-  const { pp, coqCss, maxDepth } = props;
+  const { pp, coqCss } = props;
   const inputBox = boxifyPpString(pp, coqCss);
   // console.log("box depth", max_box_depth(inputBox));
-  const [displayBox, setDisplayBox] = useState<Box>(inputBox);
+  const [displayBox, setDisplayBox] = useState<DisplayableBox>(inputBox);
   const [breakIds, setBreakIds] = useState<BreakInfo[]>([]);
   const [tokenStream, setTokenStream] = useState<Token[]>([]);
+  const [context, _] = useState<CanvasRenderingContext2D>(
+    // This "!" at the end should be safe as we are setting and creating the context here and only here
+    document.createElement("canvas").getContext("2d")!,
+  );
   // const [displayState, setDisplayState] = useState<DisplayState>({
   //   breakIds: [],
   //   display: null,
@@ -284,31 +262,30 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
     console.time("initializeDisplay");
     setDisplayBox(inputBox);
     console.timeLog("initializeDisplay");
-    const context = getContext();
-    if (!context) {
-      console.error("Could not get canvas context");
-      return;
-    }
-    // setTokenStream(buildTokenStream(inputBox, context));
+    const tokStr = buildTokenStream(inputBox);
+    setTokenStream(tokStr);
     console.timeLog("initializeDisplay");
-    computeNeededBreaks();
-    console.timeEnd("initializeDisplay");
   }, [pp]);
 
   const [lastEntry, setLastEntry] = useState<ResizeObserverEntry | null>(null);
 
   const container = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLSpanElement>(null);
+  if (content?.current) {
+    context!.font = getComputedStyle(content.current).font || "monospace";
+  }
+
+  useEffect(() => {
+    computeNeededBreaks();
+  }, [tokenStream]);
 
   const computeNeededBreaks = () => {
     if (container.current) {
       const containerRect = container.current.getBoundingClientRect();
-      const context = getContext();
-      if (!context) {
-        console.error("Could not get canvas context");
-        return;
-      }
-      setBreakIds(scanTokenStream(tokenStream, containerRect.width, context));
+      console.log("computing token stream");
+      const tokStr = scanTokenStream(tokenStream, containerRect.width);
+      console.log("Breaks:", tokStr);
+      setBreakIds(tokStr);
     }
   };
 
@@ -330,51 +307,16 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
     setLastEntry(entry);
   });
 
-  // useEffect(() => {
-  //   initializeDisplay(pp);
-  // }, [pp]);
-
-  // useLayoutEffect(() => {
-  //   if (!alreadyComputed.current) {
-  //     alreadyComputed.current = true;
-  //     console.time("computeNeededBreaks");
-  //     computeNeededBreaks();
-  //     console.timeEnd("computeNeededBreaks");
-  //   }
-  // }, [displayState]);
-
-  // const initializeDisplay = (pp: PpString) => {
-  //   if (content.current) {
-  //     console.time("initializeDisplay");
-  //     const context = getContext();
-  //     console.timeLog("initializeDisplay");
-  //     context!.font = getComputedStyle(content.current).font || "monospace";
-  //     console.timeLog("initializeDisplay");
-  //     const display = boxifyPpString(pp);
-  //     console.timeLog("initializeDisplay");
-  //     const tokenStream = buildTokenStream(display, context!);
-  //     alreadyComputed.current = false;
-  //     console.timeLog("initializeDisplay");
-  //     setDisplayState({
-  //       breakIds: [],
-  //       display: display,
-  //       tokenStream: tokenStream,
-  //       context: context,
-  //     });
-  //     console.timeEnd("initializeDisplay");
-  //   }
-  // };
-
-  const estimateBoxWidth = (
-    box: Box,
-    context: CanvasRenderingContext2D,
-  ): number => {
+  const estimateBoxWidth = (box: Box): number => {
     let currentWidth = 0;
     for (let childBox of box.boxChildren) {
       if (childBox) {
         switch (childBox.type) {
           case DisplayType.box:
-            currentWidth += estimateBoxWidth(childBox, context);
+            currentWidth += estimateBoxWidth(childBox);
+            break;
+          case DisplayType.elided:
+            currentWidth += context.measureText("[...]").width;
             break;
           case DisplayType.break:
             break;
@@ -390,7 +332,6 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
   const scanTokenStream = (
     tokenStream: Token[],
     containerWidth: number,
-    context: CanvasRenderingContext2D,
   ): BreakInfo[] => {
     let currentLineWidth = 0;
     let breakAll: boolean[] = [];
@@ -412,6 +353,10 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
             breakAll.push(false);
           }
           currentOffset.push(token.offset + currentLineWidth);
+          break;
+        case TokenType.elided:
+          // TODO: Maybe we should be break and wrapping here?
+          currentLineWidth += context.measureText("[...]").width;
           break;
         case TokenType.close:
           if (breakAll.length > 0) {
@@ -442,18 +387,18 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
   // build a token stream generator from a Box and CanvasRenderingContext2D
   // const buildTokenStream = (box: Box, context: CanvasRenderingContext2D) : Generator<Token[]> => {
 
-  const buildTokenStream = (
-    box: Box,
-    context: CanvasRenderingContext2D,
-  ): Token[] => {
+  const buildTokenStream = (box: DisplayableBox): Token[] => {
     let tokenStream: Token[] = [];
+    if (box.type === DisplayType.elided) {
+      return [{ id: box.id, type: TokenType.elided }];
+    }
     for (let i = 0; i < box.boxChildren.length; i++) {
       let childBox = box.boxChildren[i];
       if (childBox) {
         switch (childBox.type) {
           case DisplayType.box:
-            const blockWidth = estimateBoxWidth(childBox, context);
-            const blockTokenStream = buildTokenStream(childBox, context);
+            const blockWidth = estimateBoxWidth(childBox);
+            const blockTokenStream = buildTokenStream(childBox);
             const offset = context.measureText(
               " ".repeat(childBox.indent),
             ).width;
@@ -469,6 +414,12 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
               .concat(blockTokenStream)
               .concat([{ type: TokenType.close }]);
             break;
+          case DisplayType.elided:
+            tokenStream = tokenStream.concat({
+              type: TokenType.elided,
+              id: childBox.id,
+            });
+            break;
           case DisplayType.break:
             let blockLength = 0;
             for (let j = i + 1; j < box.boxChildren.length; j++) {
@@ -476,7 +427,10 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
               if (nextBlock) {
                 switch (nextBlock.type) {
                   case DisplayType.box:
-                    blockLength += estimateBoxWidth(nextBlock, context);
+                    blockLength += estimateBoxWidth(nextBlock);
+                    break;
+                  case DisplayType.elided:
+                    blockLength += context.measureText("[...]").width;
                     break;
                   case DisplayType.break:
                     break;
@@ -511,22 +465,23 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
   };
 
   const PpBox_from_Box = (
-    box: Box,
+    box: DisplayableBox,
     breaks: BreakInfo[],
-    parentHide: HideStates,
   ): JSX.Element => {
+    console.log(coqCss);
+    if (box.type === DisplayType.elided) {
+      return <PpElided id={box.id} />;
+    }
     return (
       <PpBox
         key={`box-${box.id}`}
         id={box.id}
-        coqCss={coqCss}
         classList={box.classList}
         mode={box.mode}
         type={box.type}
         boxChildren={box.boxChildren}
         indent={box.indent}
         breaks={breaks}
-        parentHide={parentHide}
       />
     );
   };
@@ -534,22 +489,7 @@ const ppDisplay: FunctionComponent<PpProps> = (props) => {
   return (
     <div ref={container} className={classes.Container}>
       <span ref={content} className={classes.Content}>
-        {PpBox_from_Box(displayBox, breakIds, HideStates.UNHIDE)}
-        {/* <PpBox
-          id={displayBox.id}
-          coqCss={coqCss}
-          depth={0}
-          parentHide={HideStates.UNHIDE}
-          hovered={hovered}
-          maxDepth={maxDepth}
-          classList={[]}
-          mode={displayBox.mode}
-          type={displayBox.type}
-          boxChildren={displayBox.boxChildren}
-          indent={displayBox.indent}
-          breaks={breakIds}
-          addedDepth={0}
-        /> */}
+        {PpBox_from_Box(displayBox, breakIds)}
       </span>
     </div>
   );

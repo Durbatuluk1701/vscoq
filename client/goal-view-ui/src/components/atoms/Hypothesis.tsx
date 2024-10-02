@@ -1,26 +1,20 @@
-import React, {FunctionComponent} from 'react';
+import { FunctionComponent } from "react";
 
-import classes from './PpString.module.css';
-import { PpDisplay, PpString } from 'pp-display';
+import { PpDisplay, PpString } from "pp-display";
+import classes from "./PpString.module.css";
 
 type HypothesisProps = {
-    content: PpString;
-    maxDepth: number;
+  content: PpString;
 };
 
 const hypothesis: FunctionComponent<HypothesisProps> = (props) => {
-    
-    const {content, maxDepth} = props;
+  const { content } = props;
 
-    return (
-        <div className={classes.Hypothesis}>
-            <PpDisplay 
-                pp={content}
-                coqCss={classes}
-                maxDepth={maxDepth}
-            />
-        </div>
-    );
+  return (
+    <div className={classes.Hypothesis}>
+      <PpDisplay pp={content} coqCss={classes} />
+    </div>
+  );
 };
 
 export default hypothesis;

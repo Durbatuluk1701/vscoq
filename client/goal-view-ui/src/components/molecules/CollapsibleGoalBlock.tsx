@@ -1,28 +1,41 @@
-import React, {FunctionComponent} from 'react';
+import { FunctionComponent } from "react";
 
-import GoalBlock from './GoalBlock';
-import Accordion from '../atoms/Accordion';
-import { CollapsibleGoal } from '../../types';
+import { CollapsibleGoal } from "../../types";
+import Accordion from "../atoms/Accordion";
+import GoalBlock from "./GoalBlock";
 
 type CollapsibleGoalBlockProps = {
-    goal: CollapsibleGoal,
-    collapseHandler: (id: string) => void, 
-    goalIndex: number,
-    goalIndicator: string,
-    maxDepth: number,
-    helpMessageHandler: (message: string) => void
+  goal: CollapsibleGoal;
+  collapseHandler: (id: string) => void;
+  goalIndex: number;
+  goalIndicator: string;
+  helpMessageHandler: (message: string) => void;
 };
 
-const collapsibleGoalBlock: FunctionComponent<CollapsibleGoalBlockProps> = (props) => {
-    
-    const {goal, goalIndex, goalIndicator, collapseHandler, maxDepth, helpMessageHandler} = props;
+const collapsibleGoalBlock: FunctionComponent<CollapsibleGoalBlockProps> = (
+  props,
+) => {
+  const {
+    goal,
+    goalIndex,
+    goalIndicator,
+    collapseHandler,
+    helpMessageHandler,
+  } = props;
 
-    return (
-        <Accordion title={"Goal " + goalIndex} collapsed={!goal.isOpen} collapseHandler={() => collapseHandler(goal.id)}>
-            <GoalBlock goal={goal} goalIndicator={goalIndicator} maxDepth={maxDepth} helpMessageHandler={helpMessageHandler}/>
-        </Accordion>
-    );
-
+  return (
+    <Accordion
+      title={"Goal " + goalIndex}
+      collapsed={!goal.isOpen}
+      collapseHandler={() => collapseHandler(goal.id)}
+    >
+      <GoalBlock
+        goal={goal}
+        goalIndicator={goalIndicator}
+        helpMessageHandler={helpMessageHandler}
+      />
+    </Accordion>
+  );
 };
 
 export default collapsibleGoalBlock;

@@ -1,5 +1,6 @@
 import { FunctionComponent, useEffect, useState } from "react";
 import PpBreak from "./pp-break";
+import PpElided from "./pp-elided";
 import classes from "./Pp.module.css";
 import { Box, BreakInfo, DisplayType, HideStates } from "./types";
 
@@ -16,21 +17,12 @@ const ComputeHideState = (self: HideStates, parent: HideStates) => {
 };
 
 interface PpBoxProps extends Box {
-  coqCss: CSSModuleClasses;
   breaks: BreakInfo[];
-  parentHide: HideStates;
-  // hovered: boolean,
-  // addedDepth: number,
 }
 
 const PpBox: FunctionComponent<PpBoxProps> = (props) => {
-  const { mode, coqCss, id, breaks, boxChildren, parentHide } = props;
-  // const [selfHide, setSelfHide] = useState<HideStates>(
-  //   ComputeHideState(
-  //     depth >= maxDepth ? HideStates.HIDE : HideStates.UNHIDE,
-  //     parentHide,
-  //   ),
-  // );
+  const { mode, id, breaks, boxChildren } = props;
+
   const [hovered, setHovered] = useState<boolean>(false);
   useEffect(() => {
     window.addEventListener("keydown", onKeyDown);
@@ -51,67 +43,58 @@ const PpBox: FunctionComponent<PpBoxProps> = (props) => {
     setHovered(false);
   };
 
-  const inner =
-    // selfHide === HideStates.HIDE
-    //   ? ellpisis
-    boxChildren.map((child, i) => {
-      if (child) {
-        if (child.type === DisplayType.box) {
-          return (
-            <PpBox
-              key={child.id}
-              type={child.type}
-              parentHide={parentHide}
-              coqCss={coqCss}
-              id={child.id}
-              classList={child.classList}
-              mode={child.mode}
-              indent={child.indent}
-              breaks={breaks}
-              boxChildren={child.boxChildren}
-            />
-          );
-        } else if (child.type === DisplayType.break) {
-          const lineBreak = breaks.find((br) => br.id === child.id);
-          return (
-            <PpBreak
-              key={child.id}
-              id={child.id}
-              offset={lineBreak ? lineBreak.offset : 0}
-              mode={mode}
-              horizontalIndent={child.horizontalIndent}
-              lineBreak={lineBreak !== undefined}
-            />
-          );
-        } else {
-          return (
-            <span key={"term" + i} className={child.classList.join(" ")}>
-              {child.content}
-            </span>
-          );
-        }
+  const inner = boxChildren.map((child, i) => {
+    if (child) {
+      if (child.type === DisplayType.box) {
+        return (
+          <PpBox
+            key={child.id}
+            type={child.type}
+            id={child.id}
+            classList={child.classList}
+            mode={child.mode}
+            indent={child.indent}
+            breaks={breaks}
+            boxChildren={child.boxChildren}
+          />
+        );
+      } else if (child.type === DisplayType.break) {
+        const lineBreak = breaks.find((br) => br.id === child.id);
+        return (
+          <PpBreak
+            key={child.id}
+            id={child.id}
+            offset={lineBreak ? lineBreak.offset : 0}
+            mode={mode}
+            horizontalIndent={child.horizontalIndent}
+            lineBreak={lineBreak !== undefined}
+          />
+        );
+      } else if (child.type === DisplayType.elided) {
+        return <PpElided id={child.id} />;
+      } else {
+        return (
+          <span key={"term" + i} className={child.classList.join(" ")}>
+            {child.content}
+          </span>
+        );
       }
-    });
+    } else {
+      // If the child is undefined, return an empty fragment
+      return <></>;
+    }
+  });
 
   const classNames = hovered ? [classes.Box, classes.Hovered] : [classes.Box];
 
   return (
     <span
-      // id={id}
+      id={id}
       className={classNames.join(" ")}
-      // onClick={(e) => {
-      //   e.stopPropagation();
-      //   if (e.altKey) {
-      //     if (selfHide === HideStates.HIDE) {
-      //       // setDepthOpen(depthOpen + ADDED_DEPTH_FACTOR);
-      //       setSelfHide(e.shiftKey ? HideStates.EXPAND_ALL : HideStates.UNHIDE);
-      //     } else {
-      //       // We must be in a visible state, so turn to hide
-      //       // setDepthOpen(Math.max(depthOpen - ADDED_DEPTH_FACTOR, 0));
-      //       setSelfHide(HideStates.HIDE);
-      //     }
-      //   }
-      // }}
+      onClick={(e) => {
+        e.stopPropagation();
+        // In here we probably need to call out to a pass in function to make the box with "id" visible
+      }}
     >
       {inner}
     </span>

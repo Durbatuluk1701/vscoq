@@ -1,40 +1,35 @@
-import React, {FunctionComponent, MouseEvent, KeyboardEvent} from 'react';
+import { FunctionComponent } from "react";
 
-import classes from './PpString.module.css';
-import { PpDisplay, PpString } from 'pp-display';
+import { PpDisplay, PpString } from "pp-display";
+import classes from "./PpString.module.css";
 
 type GoalProps = {
-    goal: PpString,
-    maxDepth: number,
-    setHelpMessage: (message: string) => void;
+  goal: PpString;
+  setHelpMessage: (message: string) => void;
 };
 
-const goal : FunctionComponent<GoalProps> = (props) => {
-    
-    const {goal, maxDepth, setHelpMessage} = props;
+const goal: FunctionComponent<GoalProps> = (props) => {
+  const { goal, setHelpMessage } = props;
 
-    return (
-        <div 
-            className={classes.Goal} 
-            onMouseOver={() => {
-                if(setHelpMessage !== undefined) {
-                    setHelpMessage("Click on the window and keep Alt pressed in to enable term eliding/expanding.");
-                }
-            }}
-            onMouseOut={() => {
-                if(setHelpMessage !== undefined) {
-                    setHelpMessage("");
-                }
-            }}
-        >
-            <PpDisplay 
-                pp={goal}
-                coqCss={classes}
-                maxDepth={maxDepth}
-            />
-        </div>
-    );
+  return (
+    <div
+      className={classes.Goal}
+      onMouseOver={() => {
+        if (setHelpMessage !== undefined) {
+          setHelpMessage(
+            "Click on the window and keep Alt pressed in to enable term eliding/expanding.",
+          );
+        }
+      }}
+      onMouseOut={() => {
+        if (setHelpMessage !== undefined) {
+          setHelpMessage("");
+        }
+      }}
+    >
+      <PpDisplay pp={goal} coqCss={classes} />
+    </div>
+  );
 };
 
 export default goal;
-

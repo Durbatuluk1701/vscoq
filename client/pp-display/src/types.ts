@@ -45,6 +45,7 @@ export type FlattenedPpString =
 
 export enum DisplayType {
   box = "box",
+  elided = "elided",
   term = "term",
   break = "break",
 }
@@ -69,11 +70,27 @@ export interface Term {
   classList: string[];
   content: string;
 }
+export interface Box {
+  id: string;
+  type: DisplayType.box;
+  classList: string[];
+  mode: PpMode;
+  indent: number;
+  boxChildren: BoxDisplay[];
+}
 
-export type BoxDisplay = Break | Term | Box | null;
+export interface Elided {
+  id: string;
+  type: DisplayType.elided;
+}
+
+export type DisplayableBox = Box | Elided;
+
+export type BoxDisplay = Break | Term | DisplayableBox | null;
 
 export enum TokenType {
   term = "term",
+  elided = "elided",
   open = "open",
   close = "close",
   break = "break",
@@ -82,6 +99,11 @@ export enum TokenType {
 export type TokenTerm = {
   type: TokenType.term;
   length: number;
+};
+
+export type TokenElided = {
+  id: string;
+  type: TokenType.elided;
 };
 
 export type BlockOpen = {
@@ -102,14 +124,9 @@ export type TokenBreak = {
   indent: number;
 };
 
-export type Token = TokenTerm | BlockOpen | BlockClose | TokenBreak;
-
-export interface Box {
-  id: string;
-  type: DisplayType.box;
-  // depth: number;
-  classList: string[];
-  mode: PpMode;
-  indent: number;
-  boxChildren: BoxDisplay[];
-}
+export type Token =
+  | TokenTerm
+  | TokenElided
+  | BlockOpen
+  | BlockClose
+  | TokenBreak;
