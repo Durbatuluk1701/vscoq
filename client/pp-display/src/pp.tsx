@@ -25,13 +25,6 @@ type PpProps = {
   coqCss: CSSModuleClasses;
 };
 
-type DisplayState = {
-  breakIds: BreakInfo[];
-  display: Box | null;
-  tokenStream: Token[] | null;
-  context: CanvasRenderingContext2D | null;
-};
-
 const getPpTag = (
   pp: PpString,
   tag: string,

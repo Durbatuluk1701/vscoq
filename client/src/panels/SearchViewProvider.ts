@@ -42,7 +42,7 @@ export default class SearchViewProvider implements vscode.WebviewViewProvider {
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
     this._view = webviewView;
@@ -182,7 +182,7 @@ export default class SearchViewProvider implements vscode.WebviewViewProvider {
                 void
               >("vscoq/search");
               client.sendRequest(req, params).then(
-                (handshake: SearchCoqHandshake) => {
+                (_: SearchCoqHandshake) => {
                   webview.postMessage({ command: "launchedSearch" });
                 },
                 (err: QueryError) => {

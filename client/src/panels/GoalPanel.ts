@@ -288,7 +288,6 @@ export default class GoalPanel {
     webview.onDidReceiveMessage(
       (message: any) => {
         const command = message.command;
-        const text = message.text;
 
         switch (command) {
           case "openGoalSettings":

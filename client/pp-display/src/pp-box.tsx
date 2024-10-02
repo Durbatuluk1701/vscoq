@@ -2,19 +2,7 @@ import { FunctionComponent, useEffect, useState } from "react";
 import PpBreak from "./pp-break";
 import PpElided from "./pp-elided";
 import classes from "./Pp.module.css";
-import { Box, BreakInfo, DisplayType, HideStates } from "./types";
-
-/**
- * Computes the optimal hide state given a hide state for the current box and the hide state for the parent box .
- */
-const ComputeHideState = (self: HideStates, parent: HideStates) => {
-  // If "parent" state dictates "self", then follow it
-  if (parent === HideStates.HIDE || parent === HideStates.EXPAND_ALL) {
-    return parent;
-  }
-  // Otherwise, follow the self state
-  return self;
-};
+import { Box, BreakInfo, DisplayType } from "./types";
 
 interface PpBoxProps extends Box {
   breaks: BreakInfo[];
@@ -93,7 +81,7 @@ const PpBox: FunctionComponent<PpBoxProps> = (props) => {
       className={classNames.join(" ")}
       onClick={(e) => {
         e.stopPropagation();
-        // In here we probably need to call out to a pass in function to make the box with "id" visible
+        // TODO: In here we probably need to call out to a pass in function to make the box with "id" visible
       }}
     >
       {inner}
