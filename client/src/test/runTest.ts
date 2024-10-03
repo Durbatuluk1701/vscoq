@@ -27,10 +27,14 @@ async function main() {
     const vscoqArgs = process.env.VSCOQARGS?.split(" ");
 
     const userSettings = {
-      "vscoq.path": vscoqPath,
-      "vscoq.args": vscoqArgs,
-      "vscoq.proof.mode": 1,
-      "vscoq.proof.block": false,
+      vscoq: {
+        path: vscoqPath,
+        args: vscoqArgs,
+        proof: {
+          mode: 1,
+          block: false,
+        },
+      },
     };
 
     await fs.mkdir(userSettingsPath, { recursive: true });
