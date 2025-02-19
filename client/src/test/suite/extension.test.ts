@@ -21,7 +21,7 @@ suite('Should get diagnostics', function () {
 		vscode.workspace.getConfiguration().update('vscoq.proof.mode','Continuous');
     console.log('5');
 
-		await common.sleep(10000); // Wait for server initialization
+		// await common.sleep(10000); // Wait for server initialization
     console.log('6');
 
 		const diagnostics = vscode.languages.getDiagnostics(doc);
