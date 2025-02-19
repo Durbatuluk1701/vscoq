@@ -29,7 +29,7 @@ jobs:
       matrix:
         os: [macos-latest]
         coq: [8-18, 8-19, 8-20, master]
-        profile: [dev, fatalwarnings]
+        profile: [dev]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout

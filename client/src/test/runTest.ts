@@ -38,9 +38,9 @@ async function main() {
 		const launchArgs = [path.resolve(__dirname, '../../testFixture'), "--disable-extensions", "--user-data-dir=" + userDataDir];
 
 		// Download VS Code, unzip it and run the integration test
-        //const vscodeExecutablePath = await downloadAndUnzipVSCode('1.84.0');
+    const vscodeExecutablePath = await downloadAndUnzipVSCode('1.96.4');
 		await runTests({ 
-            // vscodeExecutablePath, 
+            vscodeExecutablePath, 
             extensionDevelopmentPath, 
             extensionTestsPath, 
             launchArgs });
