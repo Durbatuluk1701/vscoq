@@ -11,12 +11,13 @@ suite('Should get diagnostics in the appropriate tab', function () {
 	test('Skipping proofs', async () => {
 
 		const ext = vscode.extensions.getExtension('maximedenes.vscoq')!;
+		
+    const doc1 = await common.openTextFile('delegate_proof.v');
+
 		await ext.activate();
 
 		vscode.workspace.getConfiguration().update('vscoq.proof.delegation','Skip');
 		vscode.workspace.getConfiguration().update('vscoq.proof.mode','Continuous');
-
-		const doc1 = await common.openTextFile('delegate_proof.v');
 
 		const doc2 = await common.openTextFile('warn.v');
 

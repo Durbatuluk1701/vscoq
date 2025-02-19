@@ -11,12 +11,14 @@ suite('Should get diagnostics in the appropriate tab', function () {
 	test('Delegating proofs', async () => {
 
 		const ext = vscode.extensions.getExtension('maximedenes.vscoq')!;
-		await ext.activate();
+		
+    const doc1 = await common.openTextFile('delegate_proof.v');
+		
+    await ext.activate();
 
 		vscode.workspace.getConfiguration().update('vscoq.proof.delegation','Delegate');
 		vscode.workspace.getConfiguration().update('vscoq.proof.mode','Continuous');
 
-		const doc1 = await common.openTextFile('delegate_proof.v');
 		const doc2 = await common.openTextFile('warn.v');
 
 		await common.sleep(10000); // Wait for server initialization
