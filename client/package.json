@@ -30,7 +30,6 @@
   "bugs": "https://github.com/coq-community/vscoq/issues",
   "homepage": "https://github.com/coq-community/vscoq/blob/master/README.md",
   "activationEvents": [
-    "workspaceContains:**/_CoqProject",
     "workspaceContains:**/*.v"
   ],
   "main": "./dist/extension.js",
