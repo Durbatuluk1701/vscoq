@@ -43,23 +43,34 @@ suite('Should get diagnostics', function () {
 
 
 	test('Opens two files and gets feedback', async () => {
+    console.log('1');
 
 		const ext = vscode.extensions.getExtension('maximedenes.vscoq')!;
+    console.log("1");
     
     const doc1 = await common.openTextFile('basic.v');
+    console.log("2");
 
 		await ext.activate();
+    console.log("3");
 		vscode.workspace.getConfiguration().update('vscoq.proof.mode','Continuous');
+    console.log("4");
 
 		const doc2 = await common.openTextFile('warn.v');
+    console.log("5");
 
 		await common.sleep(10000); // Wait for server initialization
+    console.log("6");
 
 		const diagnostics1 = vscode.languages.getDiagnostics(doc1);
+    console.log("7");
 		const diagnostics2 = vscode.languages.getDiagnostics(doc2);
+    console.log("8");
 
 		expect(diagnostics1.length).toBe(1);
+    console.log("9");
 		expect(diagnostics2.length).toBe(1);
+    console.log("10");
 	
 	});
 
