@@ -28,21 +28,11 @@ jobs:
         ocaml-compiler: 4.14.x
 
     - name: Install opam-publish
-      run: opam install -y -j 2 opam-publish=2.5.0
-
-    - uses: webfactory/ssh-agent@v0.10.0
-      with:
-        ssh-private-key: ${{ secrets.BOT_SSH_KEY }}
-
-    - name: Write PAT
-      env:
-        OPAM_PUBLISH_TOKEN: ${{ secrets.OPAM_PUBLISH_TOKEN }}
-      run: |
-        mkdir -p ~/.opam/plugins/opam-publish
-        printf "$OPAM_PUBLISH_TOKEN" > ~/.opam/plugins/opam-publish/vscoqbot.token
+      run: opam install -y -j 2 opam-publish=2.7.1
 
     - name: Publish on opam
       env:
+        OPAM_PUBLISH_GH_TOKEN: ${{ secrets.OPAM_PUBLISH_TOKEN }}
         VERSION_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
         PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || github.event.release.prerelease }}
       run: |
