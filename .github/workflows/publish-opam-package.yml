@@ -1,0 +1,68 @@
+name: Publish opam package
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to use for release'
+        required: true
+        type: string
+      prerelease:
+        description: 'Publish as pre-release'
+        required: true
+        type: boolean
+
+jobs:
+  publish-opam-package:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        ocaml-compiler: [4.14.x]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Use OCaml ${{ matrix.ocaml-compiler }}
+      uses: avsm/setup-ocaml@v3
+      with:
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+    - name: Install opam-publish
+      run: opam install -y -j 2 opam-publish=2.5.0
+
+    - name: Inject slug/short variables
+      uses: rlespinasse/github-slug-action@v4
+
+    - uses: webfactory/ssh-agent@v0.8.0
+      with:
+          ssh-private-key: ${{ secrets.BOT_SSH_KEY }}
+
+    - name: Write PAT
+      env:
+        OPAM_PUBLISH_TOKEN: ${{ secrets.OPAM_PUBLISH_TOKEN }}
+      run: |
+        mkdir -p ~/.opam/plugins/opam-publish
+        printf "$OPAM_PUBLISH_TOKEN" > ~/.opam/plugins/opam-publish/vscoqbot.token
+
+    - name: Publish release on opam
+      if: ${{ !inputs.prerelease }}
+      run: |
+        eval $(opam env)
+        VERSION_SLUG="${{ inputs.tag }}"
+        VERSION="${VERSION_SLUG#v}"
+        cd language-server
+        git config --global user.name vscoqbot
+        git config --global user.email vscoqbot@inria.fr
+        opam publish --no-confirmation --no-browser -v $VERSION https://github.com/rocq-prover/vsrocq/releases/download/$VERSION_SLUG/vsrocq-language-server-$VERSION.tar.gz vsrocq-language-server.opam vscoq-language-server.opam
+
+    - name: Publish prerelease on coq/opam
+      if: ${{ inputs.prerelease }}
+      run: |
+        eval $(opam env)
+        VERSION_SLUG="${{ inputs.tag }}"
+        VERSION="${VERSION_SLUG#v}"
+        cd language-server
+        git config --global user.name vscoqbot
+        git config --global user.email vscoqbot@inria.fr
+        opam publish --no-confirmation --no-browser --packages-directory=extra-dev/packages --repo=rocq-prover/opam -v $VERSION https://github.com/rocq-prover/vsrocq/releases/download/$VERSION_SLUG/vsrocq-language-server-$VERSION.tar.gz vsrocq-language-server.opam vscoq-language-server.opam
