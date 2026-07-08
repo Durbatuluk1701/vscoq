@@ -180,9 +180,7 @@ After the opam package has been published (PR merged by opam maintainers), the u
 
 The CI pipeline (```ci.yml```) handles creating the draft release (with a tarball archive) when a tag is pushed. This is done in the ```create-release``` job.
 
-The CD pipeline (```cd.yml```) automatically publishes the release to opam once the draft is released. Don't forget to fill out the change log
-appropriately before hitting release. If it is a pre-release, the pipeline will publish to ```rocq-prover/opam``` instead of ```opam/opam-repository```.
+The ```publish-opam-package.yml``` pipeline publishes the language server to opam. It runs automatically when a GitHub release is published, and can also be triggered manually from the Actions tab if the automatic run fails. Don't forget to fill out the change log appropriately before hitting release. If it is a pre-release, the pipeline will publish to ```rocq-prover/opam``` instead of ```opam/opam-repository```.
 
-There are two manual pipelines:
-- ```publish-server.yml``` allows to publish a release on opam manually (if the automatic pipeline goes wrong). The user only need to give the tag (with the correct version semantics) and specify if it is a release or pre-release.
+There is one other manual pipeline:
 - ```publish-extension.yml``` handles publishing the extension on the vscode market place as well as vscodium. **This is always done manually because the opam release process might take some time. The extensions should only be published once the package is on opam.**
